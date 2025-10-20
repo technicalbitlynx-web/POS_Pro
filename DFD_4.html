@@ -1,0 +1,3078 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="icon" href="https://www.dawasa.go.tz/site/images/emblem.png" type="image/png">
+<title>DAWASA Flowmeter Dashboard</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+<style>
+  :root {
+    /* Improved color scheme */
+    --radius: 20px;
+    --transition: all 0.3s ease;
+    --shadow: 0 7px 25px rgba(0,0,0,0.08);
+    --shadow-hover: 0 12px 30px rgba(0,0,0,0.15);
+    --gauge-track: #e2e8f0;
+    --gauge-fill: #007BFF;
+    --gauge-success: #22c55e;
+    --gauge-warning: #eab308;
+    --gauge-danger: #ef4444;
+    
+    /* New variables for better theming */
+    --primary: #007BFF;
+    --primary-light: #4da3ff;
+    --primary-dark: #0056b3;
+    --secondary: #6c757d;
+    --success: #28a745;
+    --danger: #dc3545;
+    --warning: #ffc107;
+    --info: #17a2b8;
+    --light: #f8f9fa;
+    --dark: #343a40;
+    
+    /* Spacing */
+    --spacing-xs: 0.25rem;
+    --spacing-sm: 0.5rem;
+    --spacing-md: 1rem;
+    --spacing-lg: 1.5rem;
+    --spacing-xl: 2rem;
+    
+    /* Font sizes */
+    --text-xs: 0.75rem;
+    --text-sm: 0.875rem;
+    --text-md: 1rem;
+    --text-lg: 1.125rem;
+    --text-xl: 1.25rem;
+    --text-2xl: 1.5rem;
+    --text-3xl: 1.875rem;
+  }
+  
+  [data-theme="light"] {
+    --bg: #f8fafc;
+    --card-bg: #ffffff;
+    --text: #1e293b;
+    --text-muted: #3b82f6;
+    --border: #e2e8f0;
+    --hover: #f1f5f9;
+    --table-bg: #ffffff;
+    --thead-bg: #f1f5f9;
+    --shadow: 0px 7px 25px rgba(0, 0, 0, 0.08);
+    --gauge-track: #e2e8f0;
+    --gauge-fill: var(--primary);
+  }
+  
+[data-theme="dark"] {
+  --brand: #1a1a1a;
+  --bg: #2a2a2a;
+  --card-bg: #2a2a2a;
+  --text: #f5f5f5; /* Smoke white from previous change */
+  --text-muted: #f5f5f5;
+  --primary: #1a1a1a; /* Changed from #007BFF to #2a2a2a */
+  --border: #444;
+  --hover: #333;
+  --table-bg: #222;
+  --thead-bg: #333;
+  --shadow: 0px 7px 25px rgba(0, 0, 0, 0.589);
+  --gauge-track: #333;
+  --gauge-fill: #3b82f6;
+}
+  
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: "Poppins", sans-serif;
+    color: var(--text);
+    transition: var(--transition);
+  }
+  
+  body {
+    min-height: 100vh;
+    background: var(--bg);
+    overflow-x: hidden;
+    position: relative;
+  }
+
+  /* Loading spinner */
+  .spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid rgba(0, 0, 0, 0.1);
+    border-radius: 50%;
+    border-left-color: var(--primary);
+    animation: spin 1s linear infinite;
+    margin: 0 auto;
+  }
+  
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+  
+  .loading {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: var(--spacing-xl);
+  }
+
+  /* Gauge Styles */
+  .gauge-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin: 10px 0;
+    transition: var(--transition);
+  }
+  
+  .gauge {
+    width: 100%;
+    aspect-ratio: 1.8/1;
+    position: relative;
+  }
+  
+  .gauge svg {
+    width: 100%;
+    height: 100%;
+  }
+  
+  .gauge-value {
+    position: absolute;
+    inset: auto 0 10% 0;
+    text-align: center;
+    font-size: clamp(16px, 4vw, 24px);
+    font-weight: 700;
+  }
+  
+  .gauge-label {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-top: 5px;
+    text-align: center;
+  }
+  
+  .gauge-status {
+    margin-top: 6px;
+    font-size: 10px;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+  }
+  
+  .gauge-status-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    display: inline-block;
+  }
+  
+  .gauge-ok .gauge-status-dot { background-color: var(--gauge-success); }
+  .gauge-warn .gauge-status-dot { background-color: var(--gauge-warning); }
+  .gauge-bad .gauge-status-dot { background-color: var(--gauge-danger); }
+
+  /* Text display styles for individual views */
+  .text-display-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin: 15px 0;
+    padding: var(--spacing-md);
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    /* Removed hover effect for individual views */
+  }
+  
+  .text-display-value {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 5px;
+  }
+  
+  .text-display-label {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+    text-align: center;
+  }
+  
+  .text-display-status {
+    margin-top: 6px;
+    font-size: 10px;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+  }
+  
+  .text-display-status-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    display: inline-block;
+  }
+  
+  .text-display-ok .text-display-status-dot { background-color: var(--gauge-success); }
+  .text-display-warn .text-display-status-dot { background-color: var(--gauge-warning); }
+  .text-display-bad .text-display-status-dot { background-color: var(--gauge-danger); }
+
+  /* Flow metrics layout adjustments */
+  .flow-metrics {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+    margin: 10px 0;
+  }
+  
+  .flow-metric-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  .flow-metric-flex {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 12px;
+    background: rgba(0, 123, 255, 0.1);
+    border-radius: 8px;
+    transition: var(--transition);
+  }
+  
+  .flow-metric-flex:hover {
+    background: rgba(0, 123, 255, 0.15);
+  }
+  
+  .flow-metric-flex .label {
+    font-weight: 500;
+    color: var(--text);
+  }
+  
+  .flow-metric-flex .value {
+    font-weight: 700;
+    color: va;
+  }
+  
+  /* Gauge colors to match chart colors */
+  .gauge-fill-fm1 { --gauge-fill: #007BFF; }
+  .gauge-fill-fm2 { --gauge-fill: #28A745; }
+  .gauge-fill-fm3 { --gauge-fill: #DC3545; }
+  .gauge-fill-fm4 { --gauge-fill: #FFC107; }
+  .gauge-fill-fm5 { --gauge-fill: #6F42C1; }
+
+  /* Login Page Styles */
+  .login-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 20px;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Animated background with multiple images */
+.login-container::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+  z-index: -2;
+}
+
+.login-container::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image: 
+    url('https://www.dawasa.go.tz/site/images/emblem.png'),
+    url('https://www.dawasa.go.tz/site/images/logo.png'),
+    url('https://www.dawasa.go.tz/site/images/emblem.png');
+  background-size: 200px, 150px, 180px;
+  background-position: 
+    top 20px left 20px, 
+    bottom 20px right 20px, 
+    center center;
+  background-repeat: no-repeat;
+  opacity: 0.1;
+  z-index: -1;
+  animation: backgroundFloat 20s infinite ease-in-out;
+}
+
+/* Floating animation for background images */
+@keyframes backgroundFloat {
+  0%, 100% {
+    transform: translate(0, 0) rotate(0deg);
+    background-size: 200px, 150px, 180px;
+  }
+  25% {
+    transform: translate(-10px, 10px) rotate(-2deg);
+    background-size: 210px, 160px, 190px;
+  }
+  50% {
+    transform: translate(10px, -10px) rotate(2deg);
+    background-size: 190px, 140px, 170px;
+  }
+  75% {
+    transform: translate(-5px, -5px) rotate(-1deg);
+    background-size: 205px, 155px, 185px;
+  }
+}
+
+/* Pulsing glow effect */
+@keyframes pulseGlow {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(0, 123, 255, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 40px rgba(0, 123, 255, 0.6);
+  }
+}
+
+.login-card {
+  background: var(--card-bg);
+  border-radius: var(--radius);
+  padding: 40px;
+  width: 100%;
+  max-width: 450px;
+  text-align: center;
+  transition: var(--transition);
+  position: relative;
+  overflow: hidden;
+  animation: pulseGlow 4s infinite ease-in-out;
+}
+
+/* Subtle shimmer effect on card */
+.login-card::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(
+    45deg,
+    transparent,
+    rgba(255, 255, 255, 0.1),
+    transparent
+  );
+  transform: rotate(45deg);
+  animation: shimmer 3s infinite;
+  pointer-events: none;
+}
+
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%) rotate(45deg);
+  }
+  100% {
+    transform: translateX(100%) rotate(45deg);
+  }
+}
+
+.login-card:hover {
+  transform: translateY(-5px) scale(1.02);
+  box-shadow: var(--shadow-hover);
+}
+
+.login-logo {
+  width: 120px;
+  height: 120px;
+  margin: 0 auto 20px;
+  display: block;
+  transition: var(--transition);
+  animation: bounceIn 1s ease-out;
+}
+
+@keyframes bounceIn {
+  0% {
+    transform: scale(0.8);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.1);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.login-logo:hover {
+  transform: rotate(5deg) scale(1.1);
+}
+
+.login-title {
+  font-size: 1.8rem;
+  font-weight: 700;
+  margin-bottom: 10px;
+  color: #007BFF;
+  background: linear-gradient(45deg, #007BFF, #0056b3, #007BFF);
+  background-size: 200% 200%;
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: gradientShift 3s infinite ease-in-out;
+}
+
+@keyframes gradientShift {
+  0%, 100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+.login-subtitle {
+  font-size: 1rem;
+  margin-bottom: 30px;
+  color: var(--text);
+  opacity: 0;
+  animation: fadeInUp 1s ease-out 0.5s forwards;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+  
+  .login-card {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 40px;
+    width: 100%;
+    max-width: 450px;
+    text-align: center;
+    transition: var(--transition);
+  }
+  
+  .login-card:hover {
+    box-shadow: var(--shadow-hover);
+  }
+  
+  .login-logo {
+    width: 120px;
+    height: 120px;
+    margin: 0 auto 20px;
+    display: block;
+  }
+  
+  .login-title {
+    font-size: 1.8rem;
+    font-weight: 700;
+    margin-bottom: 10px;
+    color:#007BFF;
+  }
+  
+  .login-subtitle {
+    font-size: 1rem;
+    margin-bottom: 30px;
+    color: var(--text);
+  }
+  
+  .login-form {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+  
+  .form-group {
+    text-align: left;
+    position: relative;
+  }
+  
+  .form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 500;
+    color: var(--text);
+  }
+  
+  .form-group input {
+    width: 100%;
+    padding: 12px 15px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 1rem;
+    transition: var(--transition);
+    color: var(--text);
+    background: var(--card-bg);
+  }
+  
+  .form-group input:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.2);
+  }
+  
+  .form-group input.valid {
+    border-color: var(--success);
+  }
+  
+  .form-group input.invalid {
+    border-color: var(--danger);
+  }
+  
+  .validation-feedback {
+    font-size: 0.8rem;
+    margin-top: 5px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  
+  .validation-feedback.valid {
+    color: var(--success);
+  }
+  
+  .validation-feedback.invalid {
+    color: var(--danger);
+  }
+  
+  .login-btn {
+    background: var(--primary);
+    color: #ffffff;
+    border: none;
+    padding: 12px;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition);
+  }
+  
+  .login-btn:hover {
+    background: var(--primary-dark);
+    transform: translateY(-2px);
+  }
+  
+  .login-btn:disabled {
+    background: var(--secondary);
+    cursor: not-allowed;
+    transform: none;
+  }
+  
+  .login-footer {
+    margin-top: 30px;
+    font-size: 0.9rem;
+    color: var(--text);
+  }
+
+  /* Sign Up Form Styles */
+  .signup-form {
+    display: none;
+    flex-direction: column;
+    gap: 20px;
+  }
+  
+  .form-switch {
+    margin-top: 20px;
+    font-size: 0.9rem;
+    color: #007BFF;
+  }
+  
+  .form-switch a {
+    color: var(--primary);
+    text-decoration: none;
+    cursor: pointer;
+    font-weight: 500;
+  }
+  
+  .form-switch a:hover {
+    text-decoration: underline;
+  }
+  
+  .error-message {
+    color: var(--danger);
+    font-size: 0.8rem;
+    margin-top: 5px;
+    display: none;
+  }
+
+  /* Clear history button */
+  #clearHistoryBtn:hover {
+    color: var(--danger);
+    background: rgba(220, 53, 69, 0.1);
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+  }
+
+  /* Toast notifications */
+  .toast-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 2000;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  
+  .toast {
+    padding: 12px 20px;
+    border-radius: 8px;
+    color: white;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    box-shadow: var(--shadow);
+    animation: slideIn 0.3s ease;
+    max-width: 350px;
+  }
+  
+  .toast.success {
+    background-color: var(--success);
+  }
+  
+  .toast.error {
+    background-color: var(--danger);
+  }
+  
+  .toast.warning {
+    background-color: var(--warning);
+    color: var(--dark);
+  }
+  
+  .toast.info {
+    background-color: var(--info);
+  }
+  
+  @keyframes slideIn {
+    from {
+      transform: translateX(100%);
+      opacity: 0;
+    }
+    to {
+      transform: translateX(0);
+      opacity: 1;
+    }
+  }
+  
+  @keyframes slideOut {
+    from {
+      transform: translateX(0);
+      opacity: 1;
+    }
+    to {
+      transform: translateX(100%);
+      opacity: 0;
+    }
+  }
+
+  /* Sidebar */
+  .navigation {
+    position: fixed;
+    width: 300px;
+    height: 100%;
+    background: var(--primary);
+    border-left: 10px solid var(--primary);
+    transition: 0.5s;
+    overflow: hidden;
+    z-index: 1000;
+    box-shadow: var(--shadow);
+  }
+  
+  .navigation.active { width: 80px; }
+  
+  .navigation ul { 
+    position: absolute; 
+    top: 0; 
+    left: 0; 
+    width: 100%; 
+  }
+  
+  .navigation ul li { 
+    position: relative; 
+    width: 100%; 
+    list-style: none; 
+    border-top-left-radius: 30px; 
+    border-bottom-left-radius: 30px; 
+    transition: var(--transition);
+  }
+  
+  .navigation ul li:hover, .navigation ul li.hovered, .navigation ul li.active { 
+    background: var(--card-bg); 
+  }
+  
+  .navigation ul li:nth-child(1) { 
+    margin-bottom: 40px; 
+    pointer-events: none; 
+  }
+  
+  .navigation ul li a { 
+    display: flex; 
+    align-items: center; 
+    text-decoration: none; 
+    color: #fff; 
+    transition: var(--transition);
+  }
+  
+  .navigation ul li:hover a, .navigation ul li.hovered a, .navigation ul li.active a { 
+    color: var(--primary); 
+  }
+  
+  .navigation ul li a .icon { 
+    display: block; 
+    min-width: 60px; 
+    height: 60px; 
+    line-height: 75px; 
+    text-align: center; 
+  }
+  
+  .navigation ul li a .icon ion-icon { 
+    font-size: 1.75rem; 
+  }
+  
+  .navigation ul li a .title { 
+    display: block; 
+    padding: 0 10px; 
+    height: 60px; 
+    line-height: 60px; 
+    white-space: nowrap; 
+  }
+  
+  .navigation ul li:nth-child(1) a .title {
+    font-size: 1.8rem;
+    font-weight: 700;
+  }
+  
+  .navigation ul li:hover a::before, .navigation ul li.hovered a::before, .navigation ul li.active a::before {
+    content: ""; 
+    position: absolute; 
+    right: 0; 
+    top: -50px; 
+    width: 50px; 
+    height: 50px; 
+    border-radius: 50%; 
+    box-shadow: 35px 35px 0 10px var(--card-bg); 
+    pointer-events: none;
+  }
+  
+  .navigation ul li:hover a::after, .navigation ul li.hovered a::after, .navigation ul li.active a::after {
+    content: ""; 
+    position: absolute; 
+    right: 0; 
+    bottom: -50px; 
+    width: 50px; 
+    height: 50px; 
+    border-radius: 50%; 
+    box-shadow: 35px -35px 0 10px var(--card-bg); 
+    pointer-events: none;
+  }
+
+  /* Main */
+  .main {
+    position: absolute;
+    width: calc(100% - 300px);
+    left: 300px;
+    min-height: 100vh;
+    background: var(--bg);
+    transition: 0.5s;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    display: none;
+  }
+  
+  .main.active { 
+    width: calc(100% - 80px); 
+    left: 80px; 
+  }
+  
+  /* Topbar */
+  .topbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    height: 60px;
+    padding: 0 10px;
+    position: relative;
+    z-index: 100;
+    margin-bottom: 20px;
+  }
+  
+  .toggle {
+    width: 60px;
+    height: 60px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 2.2rem;
+    cursor: pointer;
+    z-index: 200;
+    color: var(--text);
+    border-radius: 50%;
+    transition: var(--transition);
+  }
+  
+  .toggle:hover {
+    background-color: var(--hover);
+  }
+  
+  .search {
+    position: relative;
+    width: 420px;
+    margin: 0 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .search label { display: none; }
+  
+  .page-title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: #3b82f6;
+    text-align: center;
+  }
+  
+  /* Logo instead of user initials */
+  .logo {
+    width: 90px;
+    height: 90px;
+    border-radius: 5%;
+    overflow: hidden;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #f8fafc;
+    transition: var(--transition);
+  }
+  
+  .logo:hover {
+    transform: scale(1.05);
+  }
+  
+  .logo img { 
+    width: 100%; 
+    height: 100%;
+    object-fit: cover; 
+  }
+
+  /* Theme Toggle and Logout */
+  .theme-toggle {
+    position: fixed;
+    bottom: 85px;
+    left: 20px;
+    width: 50px;
+    height: 50px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 1.5rem;
+    cursor: pointer;
+    background: var(--card-bg);
+    border-radius: 50%;
+    box-shadow: var(--shadow);
+    z-index: 1000;
+    transition: var(--transition);
+    color: var(--text);
+  }
+  
+  .theme-toggle:hover {
+    transform: scale(1.1);
+    box-shadow: var(--shadow-hover);
+  }
+  
+  .logout-btn {
+    position: fixed;
+    bottom: 20px;
+    left: 20px;
+    width: 50px;
+    height: 50px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 1.5rem;
+    cursor: pointer;
+    background: var(--card-bg);
+    border-radius: 50%;
+    box-shadow: var(--shadow);
+    z-index: 1000;
+    transition: var(--transition);
+    border: none;
+    color: var(--text);
+    /* Animation properties */
+    opacity: 0;
+    transform: translateY(20px) scale(0.8);
+    pointer-events: none;
+  }
+  
+  .logout-btn.visible {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    pointer-events: auto;
+  }
+  
+  .logout-btn:hover {
+    transform: scale(1.1);
+    box-shadow: var(--shadow-hover);
+    background-color: var(--danger);
+    color: white;
+  }
+  
+  .logout-btn.visible:hover {
+    transform: scale(1.1);
+  }
+
+  /* Dashboard grid */
+  .grid { 
+    display: grid; 
+    grid-template-columns: repeat(4, 1fr); 
+    grid-gap: 20px; 
+  }
+  
+  .grid-5 { 
+    grid-template-columns: repeat(4, 1fr); 
+  }
+  
+  .flow-card {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    min-width: 0;
+    transition: var(--transition);
+    border: 1px solid var(--border);
+  }
+  
+  .flow-card:hover {
+    box-shadow: var(--shadow-hover);
+    transform: translateY(-5px);
+  }
+  
+  .flow-title { 
+    font-weight: 600; 
+    font-size: 1.1rem; 
+    color: var(--text); 
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border);
+  }
+  
+  .flow-metric { 
+    font-size: 0.95rem; 
+    color: var(--text); 
+  }
+  
+  .flow-metric span { 
+    font-weight: 600; 
+    color: var(--primary); 
+  }
+  
+  .flow-unit { 
+    font-size: 0.9rem; 
+    color: var(--primary); 
+  }
+  
+  .chart-wrap { 
+    width: 100%; 
+    height: 220px; 
+    min-height: 200px; 
+  }
+  
+  .table-wrap {
+    overflow: auto;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  table { 
+    width: 100%; 
+    border-collapse: collapse; 
+    background: var(--table-bg); 
+    min-width: 300px; 
+  }
+  
+  thead td { 
+    font-weight: 600; 
+    background: var(--thead-bg); 
+    color: var(--text); 
+    position: sticky;
+    top: 0;
+  }
+  
+  td { 
+    padding: 10px; 
+    border-bottom: 1px solid var(--border); 
+    font-size: 0.95rem; 
+    color: var(--text); 
+    transition: var(--transition);
+  }
+  
+  tr:hover td {
+    background-color: var(--hover);
+  }
+  
+  .muted { 
+    color: var(--text-muted); 
+    font-size: 0.9rem; 
+  }
+
+  .views { 
+    display: none; 
+  }
+  
+  .views.active { 
+    display: grid; 
+    animation: fadeIn 0.3s ease;
+  }
+
+  /* Daily reset notification */
+  .reset-notification {
+    position: fixed;
+    top: 70px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--warning);
+    color: var(--dark);
+    padding: 10px 20px;
+    border-radius: 8px;
+    z-index: 1000;
+    box-shadow: var(--shadow);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    animation: slideIn 0.5s ease;
+  }
+  
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  /* Individual flowmeter layout */
+  .flowmeter-layout {
+    display: grid;
+    grid-template-columns: 1fr 2fr;
+    grid-gap: 20px;
+    width: 100%;
+    height: calc(100vh - 100px);
+  }
+  
+  .flowmeter-layout .table-wrap { 
+    height: 100%; 
+    overflow-y: auto; 
+  }
+  
+  .flowmeter-layout .chart-wrap { 
+    height: 100%; 
+  }
+
+  /* Mobile overlay for sidebar */
+  .overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 999;
+  }
+
+  /* Bottom-right text (replacing footer) */
+  .bottom-right-text {
+    align-self: flex-end;
+    margin-left: auto;
+    padding: 10px;
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    opacity: 0.7;
+    text-align: right;
+  }
+
+  /* Username display above the "Powered by" text */
+  .username-display {
+    align-self: flex-end;
+    margin-top: auto;
+    margin-left: auto;
+    padding-top: 10px;
+    padding-right: 10px;
+    font-size: 1rem;
+    color: var(--text-muted);
+    opacity: 0.7;
+    text-align: right;
+  }
+
+  #switchToSignup{
+    color: #007BFF;
+  }
+
+  /* Responsive adjustments */
+  @media (max-width: 1400px) { 
+    .grid-5 { 
+      grid-template-columns: repeat(3, 1fr); 
+    } 
+  }
+  
+  @media (max-width: 1200px) { 
+    .grid-5 { 
+      grid-template-columns: repeat(2, 1fr); 
+    } 
+  }
+  
+  @media (max-width: 991px) {
+    .navigation { 
+      width: 80px; 
+      transform: translateX(-100%); 
+      z-index: 1000; 
+    }
+    
+    .navigation.active { 
+      transform: translateX(0); 
+      width: 300px; 
+    }
+    
+    .main { 
+      width: 100%; 
+      left: 0; 
+      padding: 15px; 
+    }
+    
+    .main.active { 
+      width: 100%; 
+      left: 0; 
+    }
+    
+    .overlay.active { 
+      display: block; 
+    }
+    
+    .flowmeter-layout { 
+      grid-template-columns: 1fr; 
+      grid-gap: 15px; 
+      height: auto; 
+    }
+    
+    .flowmeter-layout .chart-wrap { 
+      height: 400px; 
+    }
+    
+    .page-title {
+      font-size: 1.2rem; 
+      width: 100%; 
+      text-align: center; 
+      position: absolute; 
+      left: 50%; 
+      transform: translateX(-50%);
+    }
+    
+    .toggle { 
+      position: relative; 
+      z-index: 1001; 
+    }
+    
+    .theme-toggle, .logout-btn { 
+      bottom: 15px; 
+      left: 15px; 
+      width: 40px; 
+      height: 40px; 
+      font-size: 1.2rem; 
+    }
+    
+    .theme-toggle { 
+      bottom: 65px; 
+    }
+    
+    .bottom-right-text, .username-display {
+      font-size: 0.75rem;
+      padding: 8px;
+    }
+  }
+  
+  @media (max-width: 768px) {
+  .login-container::after {
+    background-size: 120px, 100px, 140px;
+    background-position: 
+      top 10px left 10px, 
+      bottom 10px right 10px, 
+      center center;
+    animation: backgroundFloatMobile 15s infinite ease-in-out;
+  }
+  
+  @keyframes backgroundFloatMobile {
+    0%, 100% {
+      transform: translate(0, 0) rotate(0deg);
+      background-size: 120px, 100px, 140px;
+    }
+    25% {
+      transform: translate(-5px, 5px) rotate(-1deg);
+      background-size: 130px, 110px, 150px;
+    }
+    50% {
+      transform: translate(5px, -5px) rotate(1deg);
+      background-size: 110px, 90px, 130px;
+    }
+    75% {
+      transform: translate(-3px, -3px) rotate(-0.5deg);
+      background-size: 125px, 105px, 145px;
+    }
+  }
+  
+  .login-card {
+    padding: 30px 20px;
+    animation: pulseGlowMobile 4s infinite ease-in-out;
+  }
+  
+  @keyframes pulseGlowMobile {
+    0%, 100% {
+      box-shadow: 0 0 15px rgba(0, 123, 255, 0.2);
+    }
+    50% {
+      box-shadow: 0 0 25px rgba(0, 123, 255, 0.4);
+    }
+  }
+
+    .grid-5 { 
+      grid-template-columns: 1fr; 
+      grid-gap: 15px; 
+    }
+    
+    .search { 
+      width: auto; 
+      max-width: 250px; 
+    }
+    
+    .topbar { 
+      flex-wrap: wrap; 
+      height: auto; 
+      padding: 10px 0; 
+    }
+    
+    .toggle { 
+      order: 1; 
+    }
+    
+    .search { 
+      order: 3; 
+      width: 100%; 
+      max-width: 100%; 
+      margin: 10px 0 0 0; 
+      justify-content: flex-start; 
+    }
+    
+    .logo { 
+      order: 2; 
+      width: 50px; 
+      height: 50px; 
+    }
+    
+    .login-card { 
+      padding: 30px 20px; 
+    }
+  }
+  
+  @media (max-width: 600px) {
+    .navigation.active { 
+      width: 100%; 
+      max-width: 300px; 
+    }
+    
+    .flow-card { 
+      padding: 15px; 
+    }
+    
+    .chart-wrap { 
+      height: 200px; 
+    }
+    
+    .flowmeter-layout .chart-wrap { 
+      height: 300px; 
+    }
+    
+    td { 
+      padding: 8px 5px; 
+      font-size: 0.85rem; 
+    }
+    
+    .flow-title { 
+      font-size: 1rem; 
+    }
+    
+    .page-title { 
+      font-size: 1.1rem; 
+    }
+    
+    .theme-toggle, .logout-btn { 
+      bottom: 10px; 
+      left: 10px; 
+      width: 35px; 
+      height: 35px; 
+      font-size: 1rem; 
+    }
+    
+    .theme-toggle { 
+      bottom: 55px; 
+    }
+    
+    .bottom-right-text, .username-display {
+      font-size: 0.7rem;
+      padding: 5px;
+    }
+  }
+  
+  @media (max-width: 480px) {
+    .main { 
+      padding: 10px; 
+    }
+    
+    .grid { 
+      grid-gap: 15px; 
+    }
+    
+    .flowmeter-layout { 
+      grid-gap: 15px; 
+    }
+    
+    .flowmeter-layout .chart-wrap { 
+      height: 250px; 
+    }
+    
+    .flow-metrics {
+      grid-template-columns: 1fr;
+    }
+    
+    .login-title {
+      font-size: 1.5rem;
+    }
+  }
+</style>
+</head>
+<body>
+
+<!-- Toast container for notifications -->
+<div class="toast-container" id="toastContainer"></div>
+
+<!-- Login Page -->
+<div id="loginPage" class="login-container">
+  <div class="login-card">
+    <img src="https://www.dawasa.go.tz/site/images/logo.png" alt="DAWASA Logo" class="login-logo">
+    <h1 class="login-title">DAWASA Flowmeter Dashboard</h1>
+    <p class="login-subtitle">Please Log in to access the monitoring system</p>
+    
+    <!-- Login Form -->
+    <form class="login-form" id="loginForm">
+      <div class="form-group">
+        <label for="username">Email/Username</label>
+        <div style="position: relative;">
+          <input type="text" id="username" placeholder="Enter your email/username" required list="previousLogins">
+          <datalist id="previousLogins">
+            <!-- Previous logins will be populated here -->
+          </datalist>
+          <button type="button" id="clearHistoryBtn" style="position: absolute; right: 5px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; font-size: 12px; color: #999;" title="Clear history">
+            ×
+          </button>
+        </div>
+        <div class="validation-feedback" id="usernameFeedback" style="display: none;"></div>
+      </div>
+      
+      <div class="form-group">
+        <label for="password">Password</label>
+        <input type="password" id="password" placeholder="Enter your password" required>
+        <div class="validation-feedback" id="passwordFeedback" style="display: none;"></div>
+      </div>
+      
+      <button type="submit" class="login-btn" id="loginButton">Log In</button>
+    </form>
+    
+    <!-- Sign Up Form -->
+    <form class="signup-form" id="signupForm">
+      <div class="form-group">
+        <label for="signupEmail">Email</label>
+        <input type="email" id="signupEmail" placeholder="Enter your email (@dawasa.go.tz)" required>
+        <div class="validation-feedback" id="emailFeedback" style="display: none;"></div>
+        <div class="error-message" id="emailError">Email must end with @dawasa.go.tz</div>
+      </div>
+      
+      <div class="form-group">
+        <label for="signupUsername">Username</label>
+        <input type="text" id="signupUsername" placeholder="Choose a username" required>
+        <div class="validation-feedback" id="usernameSignupFeedback" style="display: none;"></div>
+      </div>
+      
+      <div class="form-group">
+        <label for="signupPassword">Password</label>
+        <input type="password" id="signupPassword" placeholder="Create a password" required>
+        <div class="validation-feedback" id="passwordSignupFeedback" style="display: none;"></div>
+      </div>
+      
+      <button type="submit" class="login-btn" id="signupButton">Create Account</button>
+    </form>
+    
+    <div class="form-switch">
+      <span id="loginSwitch">Don't have an account? <a id="switchToSignup">Sign Up</a></span>
+      <span id="signupSwitch" style="display: none;">Already have an account? <a id="switchToLogin">Log In</a></span>
+    </div>
+    
+    <p class="login-footer">For authorized personnel only</p>
+  </div>
+</div>
+
+<!-- Overlay for mobile sidebar -->
+<div class="overlay" id="overlay"></div>
+
+<!-- Sidebar -->
+<div class="navigation" id="navigation">
+  <ul>
+    <li>
+      <a href="#"><span class="icon"><ion-icon name="water-outline"></ion-icon></span><span class="title">DAWASA</span></a>
+    </li>
+    <li class="active"><a href="#" data-view="dashboard"><span class="icon"><ion-icon name="home-outline"></ion-icon></span><span class="title">Upper Ruvu TM</span></a></li>
+    <li><a href="#" data-view="fm1"><span class="icon"><ion-icon name="speedometer-outline"></ion-icon></span><span class="title">Flowmeter 01-SA</span></a></li>
+    <li><a href="#" data-view="fm2"><span class="icon"><ion-icon name="speedometer-outline"></ion-icon></span><span class="title">Flowmeter 02-SA</span></a></li>
+    <li><a href="#" data-view="fm3"><span class="icon"><ion-icon name="speedometer-outline"></ion-icon></span><span class="title">Flowmeter 03-SB</span></a></li>
+    <li><a href="#" data-view="fm4"><span class="icon"><ion-icon name="speedometer-outline"></ion-icon></span><span class="title">Flowmeter 04-SB</span></a></li>
+    <li><a href="#" data-view="fm5"><span class="icon"><ion-icon name="speedometer-outline"></ion-icon></span><span class="title">Flowmeter 05-WTP</span></a></li>
+  </ul>
+</div>
+
+<!-- Main -->
+<div class="main" id="main">
+  <div class="topbar">
+    <div class="toggle" id="toggle"><ion-icon name="menu-outline"></ion-icon></div>
+    <div class="search">
+      <label>
+        <input type="text" placeholder="Search here">
+        <ion-icon name="search-outline"></ion-icon>
+      </label>
+      <div class="page-title" id="pageTitle">DAWASA Flowmeters</div>
+    </div>
+    <!-- Logo instead of user initials -->
+    <div class="logo" id="logo">
+      <img src="https://www.dawasa.go.tz/site/images/logo.png" alt="DAWASA Logo">
+    </div>
+  </div>
+
+  <!-- DASHBOARD: 5 flowmeter cards - Updated to show Latest and Peak Flow Rate -->
+  <div id="dashboardView" class="views active grid grid-5">
+    <!-- Flowmeter 1 Card -->
+    <div class="flow-card" id="fm1Card">
+      <div class="flow-title">Flowmeter 01-SA</div>
+      <div class="flow-metrics">
+        <div class="flow-metric-item">
+          <div class="gauge-container gauge-fill-fm1">
+            <div class="gauge">
+              <svg viewBox="0 0 100 60" aria-label="Latest Flowrate gauge">
+                <!-- Track -->
+                <path d="M10,50 A40,40 0 1 1 90,50" fill="none" stroke="var(--gauge-track)" stroke-width="10" stroke-linecap="round"/>
+                <!-- Needle arc -->
+                <path id="fm1LatestArc" d="M10,50 A40,40 0 1 1 90,50" fill="none" stroke="var(--gauge-fill)" stroke-width="10" stroke-linecap="round" stroke-dasharray="0 251.2"/>
+              </svg>
+              <div id="fm1LatestGauge" class="gauge-value">--</div>
+            </div>
+            <div class="gauge-status" id="fm1LatestStatus">
+              <span class="gauge-status-dot"></span>
+              <span>Latest</span>
+            </div>
+          </div>
+        </div>
+        <div class="flow-metric-item">
+          <div class="gauge-container gauge-fill-fm1">
+            <div class="gauge">
+              <svg viewBox="0 0 100 60" aria-label="Peak Flowrate gauge">
+                <!-- Track -->
+                <path d="M10,50 A40,40 0 1 1 90,50" fill="none" stroke="var(--gauge-track)" stroke-width="10" stroke-linecap="round"/>
+                <!-- Needle arc -->
+                <path id="fm1PeakArc" d="M10,50 A40,40 0 1 1 90,50" fill="none" stroke="var(--gauge-fill)" stroke-width="10" stroke-linecap="round" stroke-dasharray="0 251.2"/>
+              </svg>
+              <div id="fm1PeakGauge" class="gauge-value">--</div>
+            </div>
+            <div class="gauge-status" id="fm1PeakStatus">
+              <span class="gauge-status-dot"></span>
+              <span>Peak</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- Update to flex layout for Total Flow Today and Average Flow Rate -->
+      <div class="flow-metrics flex-layout">
+        <div class="flow-metric-flex">
+          <span class="label">Total Flow Today:</span>
+          <span class="value"><span id="fm1Total">0.00</span> m³</span>
+        </div>
+        <div class="flow-metric-flex">
+          <span class="label">Average Flow Rate:</span>
+          <span class="value"><span id="fm1Average">0.00</span> m³/h</span>
+        </div>
+      </div>
+      <div class="chart-wrap"><canvas id="fm1Chart"></canvas></div>
+    </div>
+
+    <!-- Flowmeter 2 Card -->
+    <div class="flow-card" id="fm2Card">
+      <div class="flow-title">Flowmeter 02-SA</div>
+      <div class="flow-metrics">
+        <div class="flow-metric-item">
+          <div class="gauge-container gauge-fill-fm2">
+            <div class="gauge">
+              <svg viewBox="0 0 100 60" aria-label="Latest Flowrate gauge">
+                <!-- Track -->
+                <path d="M10,50 A40,40 0 1 1 90,50" fill="none" stroke="var(--gauge-track)" stroke-width="10" stroke-linecap="round"/>
+                <!-- Needle arc -->
+                <path id="fm2LatestArc" d="M10,50 A40,40 0 1 1 90,50" fill="none" stroke="var(--gauge-fill)" stroke-width="10" stroke-linecap="round" stroke-dasharray="0 251.2"/>
+              </svg>
+              <div id="fm2LatestGauge" class="gauge-value">--</div>
+            </div>
+            <div class="gauge-status" id="fm2LatestStatus">
+              <span class="gauge-status-dot"></span>
+              <span>Latest</span>
+            </div>
+          </div>
+        </div>
+        <div class="flow-metric-item">
+          <div class="gauge-container gauge-fill-fm2">
+            <div class="gauge">
+              <svg viewBox="0 0 100 60" aria-label="Peak Flowrate gauge">
+                <!-- Track -->
+                <path d="M10,50 A40,40 0 1 1 90,50" fill="none" stroke="var(--gauge-track)" stroke-width="10" stroke-linecap="round"/>
+                <!-- Needle arc -->
+                <path id="fm2PeakArc" d="M10,50 A40,40 0 1 1 90,50" fill="none" stroke="var(--gauge-fill)" stroke-width="10" stroke-linecap="round" stroke-dasharray="0 251.2"/>
+              </svg>
+              <div id="fm2PeakGauge" class="gauge-value">--</div>
+            </div>
+            <div class="gauge-status" id="fm2PeakStatus">
+              <span class="gauge-status-dot"></span>
+              <span>Peak</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- Update to flex layout for Total Flow Today and Average Flow Rate -->
+      <div class="flow-metrics flex-layout">
+        <div class="flow-metric-flex">
+          <span class="label">Total Flow Today:</span>
+          <span class="value"><span id="fm2Total">0.00</span> m³</span>
+        </div>
+        <div class="flow-metric-flex">
+          <span class="label">Average Flow Rate:</span>
+          <span class="value"><span id="fm2Average">0.00</span> m³/h</span>
+        </div>
+      </div>
+      <div class="chart-wrap"><canvas id="fm2Chart"></canvas></div>
+    </div>
+
+    <!-- Flowmeter 3 Card -->
+    <div class="flow-card" id="fm3Card">
+      <div class="flow-title">Flowmeter 03-SB</div>
+      <div class="flow-metrics">
+        <div class="flow-metric-item">
+          <div class="gauge-container gauge-fill-fm3">
+            <div class="gauge">
+              <svg viewBox="0 0 100 60" aria-label="Latest Flowrate gauge">
+                <!-- Track -->
+                <path d="M10,50 A40,40 0 1 1 90,50" fill="none" stroke="var(--gauge-track)" stroke-width="10" stroke-linecap="round"/>
+                <!-- Needle arc -->
+                <path id="fm3LatestArc" d="M10,50 A40,40 0 1 1 90,50" fill="none" stroke="var(--gauge-fill)" stroke-width="10" stroke-linecap="round" stroke-dasharray="0 251.2"/>
+              </svg>
+              <div id="fm3LatestGauge" class="gauge-value">--</div>
+            </div>
+            <div class="gauge-status" id="fm3LatestStatus">
+              <span class="gauge-status-dot"></span>
+              <span>Latest</span>
+            </div>
+          </div>
+        </div>
+        <div class="flow-metric-item">
+          <div class="gauge-container gauge-fill-fm3">
+            <div class="gauge">
+              <svg viewBox="0 0 100 60" aria-label="Peak Flowrate gauge">
+                <!-- Track -->
+                <path d="M10,50 A40,40 0 1 1 90,50" fill="none" stroke="var(--gauge-track)" stroke-width="10" stroke-linecap="round"/>
+                <!-- Needle arc -->
+                <path id="fm3PeakArc" d="M10,50 A40,40 0 1 1 90,50" fill="none" stroke="var(--gauge-fill)" stroke-width="10" stroke-linecap="round" stroke-dasharray="0 251.2"/>
+              </svg>
+              <div id="fm3PeakGauge" class="gauge-value">--</div>
+            </div>
+            <div class="gauge-status" id="fm3PeakStatus">
+              <span class="gauge-status-dot"></span>
+              <span>Peak</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- Update to flex layout for Total Flow Today and Average Flow Rate -->
+      <div class="flow-metrics flex-layout">
+        <div class="flow-metric-flex">
+          <span class="label">Total Flow Today:</span>
+          <span class="value"><span id="fm3Total">0.00</span> m³</span>
+        </div>
+        <div class="flow-metric-flex">
+          <span class="label">Average Flow Rate:</span>
+          <span class="value"><span id="fm3Average">0.00</span> m³/h</span>
+        </div>
+      </div>
+      <div class="chart-wrap"><canvas id="fm3Chart"></canvas></div>
+    </div>
+
+    <!-- Flowmeter 4 Card -->
+    <div class="flow-card" id="fm4Card">
+      <div class="flow-title">Flowmeter 04-SB</div>
+      <div class="flow-metrics">
+        <div class="flow-metric-item">
+          <div class="gauge-container gauge-fill-fm4">
+            <div class="gauge">
+              <svg viewBox="0 0 100 60" aria-label="Latest Flowrate gauge">
+                <!-- Track -->
+                <path d="M10,50 A40,40 0 1 1 90,50" fill="none" stroke="var(--gauge-track)" stroke-width="10" stroke-linecap="round"/>
+                <!-- Needle arc -->
+                <path id="fm4LatestArc" d="M10,50 A40,40 0 1 1 90,50" fill="none" stroke="var(--gauge-fill)" stroke-width="10" stroke-linecap="round" stroke-dasharray="0 251.2"/>
+              </svg>
+              <div id="fm4LatestGauge" class="gauge-value">--</div>
+            </div>
+            <div class="gauge-status" id="fm4LatestStatus">
+              <span class="gauge-status-dot"></span>
+              <span>Latest</span>
+            </div>
+          </div>
+        </div>
+        <div class="flow-metric-item">
+          <div class="gauge-container gauge-fill-fm4">
+            <div class="gauge">
+              <svg viewBox="0 0 100 60" aria-label="Peak Flowrate gauge">
+                <!-- Track -->
+                <path d="M10,50 A40,40 0 1 1 90,50" fill="none" stroke="var(--gauge-track)" stroke-width="10" stroke-linecap="round"/>
+                <!-- Needle arc -->
+                <path id="fm4PeakArc" d="M10,50 A40,40 0 1 1 90,50" fill="none" stroke="var(--gauge-fill)" stroke-width="10" stroke-linecap="round" stroke-dasharray="0 251.2"/>
+              </svg>
+              <div id="fm4PeakGauge" class="gauge-value">--</div>
+            </div>
+            <div class="gauge-status" id="fm4PeakStatus">
+              <span class="gauge-status-dot"></span>
+              <span>Peak</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- Update to flex layout for Total Flow Today and Average Flow Rate -->
+      <div class="flow-metrics flex-layout">
+        <div class="flow-metric-flex">
+          <span class="label">Total Flow Today:</span>
+          <span class="value"><span id="fm4Total">0.00</span> m³</span>
+        </div>
+        <div class="flow-metric-flex">
+          <span class="label">Average Flow Rate:</span>
+          <span class="value"><span id="fm4Average">0.00</span> m³/h</span>
+        </div>
+      </div>
+      <div class="chart-wrap"><canvas id="fm4Chart"></canvas></div>
+    </div>
+
+    <!-- Flowmeter 5 Card -->
+    <div class="flow-card" id="fm5Card">
+      <div class="flow-title">Flowmeter 05-WTP</div>
+      <div class="flow-metrics">
+        <div class="flow-metric-item">
+          <div class="gauge-container gauge-fill-fm5">
+            <div class="gauge">
+              <svg viewBox="0 0 100 60" aria-label="Latest Flowrate gauge">
+                <!-- Track -->
+                <path d="M10,50 A40,40 0 1 1 90,50" fill="none" stroke="var(--gauge-track)" stroke-width="10" stroke-linecap="round"/>
+                <!-- Needle arc -->
+                <path id="fm5LatestArc" d="M10,50 A40,40 0 1 1 90,50" fill="none" stroke="var(--gauge-fill)" stroke-width="10" stroke-linecap="round" stroke-dasharray="0 251.2"/>
+              </svg>
+              <div id="fm5LatestGauge" class="gauge-value">--</div>
+            </div>
+            <div class="gauge-status" id="fm5LatestStatus">
+              <span class="gauge-status-dot"></span>
+              <span>Latest</span>
+            </div>
+          </div>
+        </div>
+        <div class="flow-metric-item">
+          <div class="gauge-container gauge-fill-fm5">
+            <div class="gauge">
+              <svg viewBox="0 0 100 60" aria-label="Peak Flowrate gauge">
+                <!-- Track -->
+                <path d="M10,50 A40,40 0 1 1 90,50" fill="none" stroke="var(--gauge-track)" stroke-width="10" stroke-linecap="round"/>
+                <!-- Needle arc -->
+                <path id="fm5PeakArc" d="M10,50 A40,40 0 1 1 90,50" fill="none" stroke="var(--gauge-fill)" stroke-width="10" stroke-linecap="round" stroke-dasharray="0 251.2"/>
+              </svg>
+              <div id="fm5PeakGauge" class="gauge-value">--</div>
+            </div>
+            <div class="gauge-status" id="fm5PeakStatus">
+              <span class="gauge-status-dot"></span>
+              <span>Peak</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- Update to flex layout for Total Flow Today and Average Flow Rate -->
+      <div class="flow-metrics flex-layout">
+        <div class="flow-metric-flex">
+          <span class="label">Total Flow Today:</span>
+          <span class="value"><span id="fm5Total">0.00</span> m³</span>
+        </div>
+        <div class="flow-metric-flex">
+          <span class="label">Average Flow Rate:</span>
+          <span class="value"><span id="fm5Average">0.00</span> m³/h</span>
+        </div>
+      </div>
+      <div class="chart-wrap"><canvas id="fm5Chart"></canvas></div>
+    </div>
+  </div>
+
+  <!-- INDIVIDUAL VIEWS - Updated to show Latest and Peak Flow Rate -->
+  <!-- Flowmeter 01-SA View -->
+  <div id="fm1View" class="views">
+    <div class="flowmeter-layout">
+      <div class="flow-card" style="box-shadow: var(--shadow);"> <!-- Removed hover effect -->
+        <div class="flow-title">Flowmeter 01-SA</div>
+        <div class="flow-metrics">
+          <div class="flow-metric-item">
+            <!-- Text display for Latest Flowrate -->
+            <div class="text-display-container">
+              <div id="fm1LatestGauge_single" class="text-display-value">-- m³/h</div>
+              <div class="text-display-label">Latest Flowrate</div>
+              <div class="text-display-status" id="fm1LatestStatus_single">
+                <span class="text-display-status-dot"></span>
+                <span>Latest</span>
+              </div>
+            </div>
+          </div>
+          <div class="flow-metric-item">
+            <!-- Text display for Peak Flowrate -->
+            <div class="text-display-container">
+              <div id="fm1PeakGauge_single" class="text-display-value">-- m³/h</div>
+              <div class="text-display-label">Peak Flowrate</div>
+              <div class="text-display-status" id="fm1PeakStatus_single">
+                <span class="text-display-status-dot"></span>
+                <span>Peak</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- Update to flex layout for Total Flow Today and Average Flow Rate -->
+        <div class="flow-metrics flex-layout">
+          <div class="flow-metric-flex">
+            <span class="label">Total Flow Today:</span>
+            <span class="value"><span id="fm1Total_single">0.00</span> m³</span>
+          </div>
+          <div class="flow-metric-flex">
+            <span class="label">Average Flow Rate:</span>
+            <span class="value"><span id="fm1Average_single">0.00</span> m³/h</span>
+          </div>
+        </div>
+        <div class="flow-title">Flow Rate Table Values</div>
+        <div class="table-wrap">
+          <table><thead><tr><td>Date</td><td>Time</td><td>Flowrate (m³/h)</td></tr></thead><tbody id="fm1Table_single"></tbody></table>
+        </div>
+        <div class="muted">Last 20 readings</div>
+      </div>
+      <div class="flow-card" style="box-shadow: var(--shadow);"> <!-- Removed hover effect -->
+        <div class="flow-title">Flow Rate Chart</div>
+        <div class="chart-wrap"><canvas id="fm1Chart_single"></canvas></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Flowmeter 02-SA View -->
+  <div id="fm2View" class="views">
+    <div class="flowmeter-layout">
+      <div class="flow-card" style="box-shadow: var(--shadow);"> <!-- Removed hover effect -->
+        <div class="flow-title">Flowmeter 02-SA</div>
+        <div class="flow-metrics">
+          <div class="flow-metric-item">
+            <!-- Text display for Latest Flowrate -->
+            <div class="text-display-container">
+              <div id="fm2LatestGauge_single" class="text-display-value">-- m³/h</div>
+              <div class="text-display-label">Latest Flowrate</div>
+              <div class="text-display-status" id="fm2LatestStatus_single">
+                <span class="text-display-status-dot"></span>
+                <span>Latest</span>
+              </div>
+            </div>
+          </div>
+          <div class="flow-metric-item">
+            <!-- Text display for Peak Flowrate -->
+            <div class="text-display-container">
+              <div id="fm2PeakGauge_single" class="text-display-value">-- m³/h</div>
+              <div class="text-display-label">Peak Flowrate</div>
+              <div class="text-display-status" id="fm2PeakStatus_single">
+                <span class="text-display-status-dot"></span>
+                <span>Peak</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- Update to flex layout for Total Flow Today and Average Flow Rate -->
+        <div class="flow-metrics flex-layout">
+          <div class="flow-metric-flex">
+            <span class="label">Total Flow Today:</span>
+            <span class="value"><span id="fm2Total_single">0.00</span> m³</span>
+          </div>
+          <div class="flow-metric-flex">
+            <span class="label">Average Flow Rate:</span>
+            <span class="value"><span id="fm2Average_single">0.00</span> m³/h</span>
+          </div>
+        </div>
+        <div class="flow-title">Flow Rate Table Values</div>
+        <div class="table-wrap">
+          <table><thead><tr><td>Date</td><td>Time</td><td>Flowrate (m³/h)</td></tr></thead><tbody id="fm2Table_single"></tbody></table>
+        </div>
+        <div class="muted">Last 20 readings</div>
+      </div>
+      <div class="flow-card" style="box-shadow: var(--shadow);"> <!-- Removed hover effect -->
+        <div class="flow-title">Flow Rate Chart</div>
+        <div class="chart-wrap"><canvas id="fm2Chart_single"></canvas></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Flowmeter 03-SB View -->
+  <div id="fm3View" class="views">
+    <div class="flowmeter-layout">
+      <div class="flow-card" style="box-shadow: var(--shadow);"> <!-- Removed hover effect -->
+        <div class="flow-title">Flowmeter 03-SB</div>
+        <div class="flow-metrics">
+          <div class="flow-metric-item">
+            <!-- Text display for Latest Flowrate -->
+            <div class="text-display-container">
+              <div id="fm3LatestGauge_single" class="text-display-value">-- m³/h</div>
+              <div class="text-display-label">Latest Flowrate</div>
+              <div class="text-display-status" id="fm3LatestStatus_single">
+                <span class="text-display-status-dot"></span>
+                <span>Latest</span>
+              </div>
+            </div>
+          </div>
+          <div class="flow-metric-item">
+            <!-- Text display for Peak Flowrate -->
+            <div class="text-display-container">
+              <div id="fm3PeakGauge_single" class="text-display-value">-- m³/h</div>
+              <div class="text-display-label">Peak Flowrate</div>
+              <div class="text-display-status" id="fm3PeakStatus_single">
+                <span class="text-display-status-dot"></span>
+                <span>Peak</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- Update to flex layout for Total Flow Today and Average Flow Rate -->
+        <div class="flow-metrics flex-layout">
+          <div class="flow-metric-flex">
+            <span class="label">Total Flow Today:</span>
+            <span class="value"><span id="fm3Total_single">0.00</span> m³</span>
+          </div>
+          <div class="flow-metric-flex">
+            <span class="label">Average Flow Rate:</span>
+            <span class="value"><span id="fm3Average_single">0.00</span> m³/h</span>
+          </div>
+        </div>
+        <div class="flow-title">Flow Rate Table Values</div>
+        <div class="table-wrap">
+          <table><thead><tr><td>Date</td><td>Time</td><td>Flowrate (m³/h)</td></tr></thead><tbody id="fm3Table_single"></tbody></table>
+        </div>
+        <div class="muted">Last 20 readings</div>
+      </div>
+      <div class="flow-card" style="box-shadow: var(--shadow);"> <!-- Removed hover effect -->
+        <div class="flow-title">Flow Rate Chart</div>
+        <div class="chart-wrap"><canvas id="fm3Chart_single"></canvas></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Flowmeter 04-SB View -->
+  <div id="fm4View" class="views">
+    <div class="flowmeter-layout">
+      <div class="flow-card" style="box-shadow: var(--shadow);"> <!-- Removed hover effect -->
+        <div class="flow-title">Flowmeter 04-SB</div>
+        <div class="flow-metrics">
+          <div class="flow-metric-item">
+            <!-- Text display for Latest Flowrate -->
+            <div class="text-display-container">
+              <div id="fm4LatestGauge_single" class="text-display-value">-- m³/h</div>
+              <div class="text-display-label">Latest Flowrate</div>
+              <div class="text-display-status" id="fm4LatestStatus_single">
+                <span class="text-display-status-dot"></span>
+                <span>Latest</span>
+              </div>
+            </div>
+          </div>
+          <div class="flow-metric-item">
+            <!-- Text display for Peak Flowrate -->
+            <div class="text-display-container">
+              <div id="fm4PeakGauge_single" class="text-display-value">-- m³/h</div>
+              <div class="text-display-label">Peak Flowrate</div>
+              <div class="text-display-status" id="fm4PeakStatus_single">
+                <span class="text-display-status-dot"></span>
+                <span>Peak</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- Update to flex layout for Total Flow Today and Average Flow Rate -->
+        <div class="flow-metrics flex-layout">
+          <div class="flow-metric-flex">
+            <span class="label">Total Flow Today:</span>
+            <span class="value"><span id="fm4Total_single">0.00</span> m³</span>
+          </div>
+          <div class="flow-metric-flex">
+            <span class="label">Average Flow Rate:</span>
+            <span class="value"><span id="fm4Average_single">0.00</span> m³/h</span>
+          </div>
+        </div>
+        <div class="flow-title">Flow Rate Table Values</div>
+        <div class="table-wrap">
+          <table><thead><tr><td>Date</td><td>Time</td><td>Flowrate (m³/h)</td></tr></thead><tbody id="fm4Table_single"></tbody></table>
+        </div>
+        <div class="muted">Last 20 readings</div>
+      </div>
+      <div class="flow-card" style="box-shadow: var(--shadow);"> <!-- Removed hover effect -->
+        <div class="flow-title">Flow Rate Chart</div>
+        <div class="chart-wrap"><canvas id="fm4Chart_single"></canvas></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Flowmeter 05-WTP View -->
+  <div id="fm5View" class="views">
+    <div class="flowmeter-layout">
+      <div class="flow-card" style="box-shadow: var(--shadow);"> <!-- Removed hover effect -->
+        <div class="flow-title">Flowmeter 05-WTP</div>
+        <div class="flow-metrics">
+          <div class="flow-metric-item">
+            <!-- Text display for Latest Flowrate -->
+            <div class="text-display-container">
+              <div id="fm5LatestGauge_single" class="text-display-value">-- m³/h</div>
+              <div class="text-display-label">Latest Flowrate</div>
+              <div class="text-display-status" id="fm5LatestStatus_single">
+                <span class="text-display-status-dot"></span>
+                <span>Latest</span>
+              </div>
+            </div>
+          </div>
+          <div class="flow-metric-item">
+            <!-- Text display for Peak Flowrate -->
+            <div class="text-display-container">
+              <div id="fm5PeakGauge_single" class="text-display-value">-- m³/h</div>
+              <div class="text-display-label">Peak Flowrate</div>
+              <div class="text-display-status" id="fm5PeakStatus_single">
+                <span class="text-display-status-dot"></span>
+                <span>Peak</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- Update to flex layout for Total Flow Today and Average Flow Rate -->
+        <div class="flow-metrics flex-layout">
+          <div class="flow-metric-flex">
+            <span class="label">Total Flow Today:</span>
+            <span class="value"><span id="fm5Total_single">0.00</span> m³</span>
+          </div>
+          <div class="flow-metric-flex">
+            <span class="label">Average Flow Rate:</span>
+            <span class="value"><span id="fm5Average_single">0.00</span> m³/h</span>
+          </div>
+        </div>
+        <div class="flow-title">Flow Rate Table Values</div>
+        <div class="table-wrap">
+          <table><thead><tr><td>Date</td><td>Time</td><td>Flowrate (m³/h)</td></tr></thead><tbody id="fm5Table_single"></tbody></table>
+        </div>
+        <div class="muted">Last 20 readings</div>
+      </div>
+      <div class="flow-card" style="box-shadow: var(--shadow);"> <!-- Removed hover effect -->
+        <div class="flow-title">Flow Rate Chart</div>
+        <div class="chart-wrap"><canvas id="fm5Chart_single"></canvas></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- NEW: Username display above the "Powered by" text -->
+  <div class="username-display" id="usernameDisplay"></div>
+
+  <div class="bottom-right-text">
+    Powered by Bitlynx Reporting Solutions, DSM
+  </div>
+</div>
+
+<!-- Theme Toggle Button -->
+<div class="theme-toggle" id="themeToggle"><ion-icon name="moon-outline"></ion-icon></div>
+
+<!-- Logout Button -->
+<button class="logout-btn" id="logoutBtn" title="Logout"><ion-icon name="log-out-outline"></ion-icon></button>
+
+<!-- Libs -->
+<script type="module" src="https://unpkg.com/ionicons@5.5.2/dist/ionicons/ionicons.esm.js"></script>
+<script nomodule src="https://unpkg.com/ionicons@5.5.2/dist/ionicons/ionicons.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+
+<script>
+/* ---------------------- NEW: Auto-logout and Daily Reset Features ---------------------- */
+
+// Auto-logout when browser is closed
+function setupAutoLogout() {
+  // Clear any existing login state when page loads
+  localStorage.removeItem('isLoggedIn');
+  localStorage.removeItem('currentUser');
+  
+  // Set up beforeunload event to clear login state
+  window.addEventListener('beforeunload', function() {
+    localStorage.removeItem('isLoggedIn');
+    localStorage.removeItem('currentUser');
+  });
+}
+
+// Daily reset function to clear all data at 23:59
+function setupDailyReset() {
+  // Check if we need to reset data (after 23:59)
+  const now = new Date();
+  const resetTime = new Date();
+  resetTime.setHours(23, 59, 0, 0); // Set to 23:59
+  
+  // If it's past 23:59, clear all data
+  if (now > resetTime) {
+    clearAllFlowmeterData();
+    console.log("Daily reset: All flowmeter data cleared");
+  }
+  
+  // Schedule next reset for tomorrow at 23:59
+  const nextReset = new Date();
+  nextReset.setDate(nextReset.getDate() + 1); // Tomorrow
+  nextReset.setHours(23, 59, 0, 0); // At 23:59
+  
+  const timeUntilReset = nextReset - now;
+  
+  setTimeout(function() {
+    clearAllFlowmeterData();
+    showToast("Daily data reset completed", "info");
+    
+    // Schedule the next reset
+    setupDailyReset();
+  }, timeUntilReset);
+  
+  // Show notification 5 minutes before reset
+  const notificationTime = timeUntilReset - (5 * 60 * 1000);
+  if (notificationTime > 0) {
+    setTimeout(function() {
+      showResetNotification();
+    }, notificationTime);
+  }
+}
+
+// Show reset notification
+function showResetNotification() {
+  const notification = document.createElement('div');
+  notification.className = 'reset-notification';
+  notification.innerHTML = `
+    <ion-icon name="time-outline"></ion-icon>
+    <span>Daily data reset will occur in 5 minutes</span>
+  `;
+  document.body.appendChild(notification);
+  
+  // Remove notification after 10 seconds
+  setTimeout(() => {
+    if (notification.parentNode) {
+      notification.parentNode.removeChild(notification);
+    }
+  }, 10000);
+}
+
+// Clear all flowmeter data
+function clearAllFlowmeterData() {
+  ['fm1', 'fm2', 'fm3', 'fm4', 'fm5'].forEach(fm => {
+    // Clear from localStorage
+    localStorage.removeItem(`flowmeter_${fm}`);
+    
+    // Reset in-memory data
+    flowmeterData[fm] = { 
+      labels: [], 
+      values: [], 
+      total: 0, 
+      average: 0, 
+      peak: 0, 
+      today: new Date().toISOString().slice(0, 10) 
+    };
+    
+    // Reset UI elements
+    updateMetricsDisplay(fm, 0, 0, 0, 0);
+    
+    // Clear charts
+    if (charts[`${fm}Chart`]) {
+      charts[`${fm}Chart`].data.labels = [];
+      charts[`${fm}Chart`].data.datasets[0].data = [];
+      charts[`${fm}Chart`].update('none');
+    }
+    
+    if (charts[`${fm}Chart_single`]) {
+      charts[`${fm}Chart_single`].data.labels = [];
+      charts[`${fm}Chart_single`].data.datasets[0].data = [];
+      charts[`${fm}Chart_single`].update('none');
+    }
+    
+    // Clear tables
+    const tableElement = document.getElementById(`${fm}Table_single`);
+    if (tableElement) {
+      tableElement.innerHTML = '';
+    }
+  });
+}
+
+/* ---------------------- Utility Functions ---------------------- */
+// Show toast notification
+function showToast(message, type = 'info', duration = 5000) {
+  const toastContainer = document.getElementById('toastContainer');
+  const toast = document.createElement('div');
+  toast.className = `toast ${type}`;
+  
+  let icon = 'information-circle-outline';
+  if (type === 'success') icon = 'checkmark-circle-outline';
+  if (type === 'error') icon = 'alert-circle-outline';
+  if (type === 'warning') icon = 'warning-outline';
+  
+  toast.innerHTML = `
+    <ion-icon name="${icon}"></ion-icon>
+    <span>${message}</span>
+  `;
+  
+  toastContainer.appendChild(toast);
+  
+  // Remove toast after duration
+  setTimeout(() => {
+    toast.style.animation = 'slideOut 0.3s ease';
+    setTimeout(() => {
+      toastContainer.removeChild(toast);
+    }, 300);
+  }, duration);
+}
+
+// Update connection status
+function updateConnectionStatus(status) {
+  if (status === 'connected') {
+    showToast('Server connection established', 'success', 3000);
+  } else if (status === 'disconnected') {
+    showToast('Server connection lost', 'error');
+  } else if (status === 'connecting') {
+    showToast('Connecting to Server...', 'info');
+  }
+}
+
+// Get user initials from username
+function getUserInitials(username) {
+  if (!username) return 'DA';
+  return username.split(' ')
+    .map(name => name[0])
+    .join('')
+    .toUpperCase()
+    .substring(0, 2);
+}
+
+/* ---------------------- Gauge Functions ---------------------- */
+const arcLen = 251.2; // half-circle path length (approx for our viewBox arc)
+
+function setGauge(arcId, valueId, statusId, value, maxValue = 30) {
+  const v = Math.max(0, Math.min(maxValue, Number(value) || 0));
+  const ratio = v / maxValue;
+  const dash = (arcLen * ratio).toFixed(1) + " " + arcLen;
+  
+  // Update gauge arc
+  if (arcId) {
+    const arcElement = document.getElementById(arcId);
+    if (arcElement) {
+      arcElement.style.transition = "stroke-dasharray 0.8s ease";
+      arcElement.setAttribute("stroke-dasharray", dash);
+    }
+  }
+  
+  // Update value display
+  if (valueId) {
+    const valueElement = document.getElementById(valueId);
+    if (valueElement) {
+      valueElement.textContent = Number.isFinite(v) ? v.toFixed(2) + " m³/h" : "-- m³/h";
+      valueElement.classList.remove("value-updated");
+      setTimeout(() => valueElement.classList.add("value-updated"), 10);
+    }
+  }
+  
+  // Update status indicator
+  if (statusId) {
+    const statusElement = document.getElementById(statusId);
+    if (statusElement) {
+      if (v < maxValue * 0.6) { 
+        statusElement.className = statusElement.className.includes("gauge-status") ? 
+          "gauge-status gauge-ok" : "text-display-status text-display-ok"; 
+      } else if (v < maxValue * 0.85) { 
+        statusElement.className = statusElement.className.includes("gauge-status") ? 
+          "gauge-status gauge-warn" : "text-display-status text-display-warn"; 
+      } else { 
+        statusElement.className = statusElement.className.includes("gauge-status") ? 
+          "gauge-status gauge-bad" : "text-display-status text-display-bad"; 
+      }
+    }
+  }
+}
+
+/* ---------------------- Previous Logins Management ---------------------- */
+function saveLoginHistory(identifier) {
+  let loginHistory = JSON.parse(localStorage.getItem('dawasa_login_history') || '[]');
+  
+  // Add new identifier if not already in history
+  if (!loginHistory.includes(identifier)) {
+    loginHistory.push(identifier);
+    // Keep only the last 5 logins
+    if (loginHistory.length > 5) {
+      loginHistory = loginHistory.slice(-5);
+    }
+    localStorage.setItem('dawasa_login_history', JSON.stringify(loginHistory));
+  }
+  
+  updateLoginSuggestions();
+}
+
+function getLoginHistory() {
+  return JSON.parse(localStorage.getItem('dawasa_login_history') || '[]');
+}
+
+function updateLoginSuggestions() {
+  const loginHistory = getLoginHistory();
+  const datalist = document.getElementById('previousLogins');
+  
+  // Clear existing options
+  datalist.innerHTML = '';
+  
+  // Add new options from login history
+  loginHistory.forEach(login => {
+    const option = document.createElement('option');
+    option.value = login;
+    datalist.appendChild(option);
+  });
+}
+
+function clearLoginHistory() {
+  localStorage.removeItem('dawasa_login_history');
+  updateLoginSuggestions();
+}
+
+/* ---------------------- User Management ---------------------- */
+function validateDawasaEmail(email) {
+  return email.endsWith('@dawasa.go.tz');
+}
+
+function registerUser(email, username, password) {
+  const users = JSON.parse(localStorage.getItem('dawasa_users') || '{}');
+  
+  // Check if email already exists
+  if (users[email]) {
+    return { success: false, message: 'Email already registered' };
+  }
+  
+  // Check if username already exists
+  for (const userEmail in users) {
+    if (users[userEmail].username === username) {
+      return { success: false, message: 'Username already taken' };
+    }
+  }
+  
+  // Store user
+  users[email] = {
+    username: username,
+    password: password, // In a real app, you should hash this
+    email: email
+  };
+  
+  localStorage.setItem('dawasa_users', JSON.stringify(users));
+  return { success: true };
+}
+
+function authenticateUser(identifier, password) {
+  const users = JSON.parse(localStorage.getItem('dawasa_users') || '{}');
+  
+  // Check if identifier is email or username
+  let user = null;
+  
+  // First try as email
+  if (users[identifier]) {
+    user = users[identifier];
+  } else {
+    // Search by username
+    for (const email in users) {
+      if (users[email].username === identifier) {
+        user = users[email];
+        break;
+      }
+    }
+  }
+  
+  if (user && user.password === password) {
+    return { success: true, user: user };
+  }
+  
+  return { success: false, message: 'Invalid credentials' };
+}
+
+/* ---------------------- Form Validation ---------------------- */
+function validateEmail(email) {
+  const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return re.test(email) && email.endsWith('@dawasa.go.tz');
+}
+
+function validateUsername(username) {
+  return username.length >= 3;
+}
+
+function validatePassword(password) {
+  return password.length >= 6;
+}
+
+function showValidationFeedback(element, isValid, message) {
+  const feedback = document.getElementById(element.id + 'Feedback');
+  if (!feedback) return;
+  
+  feedback.textContent = message;
+  feedback.className = `validation-feedback ${isValid ? 'valid' : 'invalid'}`;
+  feedback.style.display = 'block';
+  
+  element.className = isValid ? 'valid' : 'invalid';
+}
+
+/* ---------------------- Login/Signup UI ---------------------- */
+const loginForm = document.getElementById('loginForm');
+const signupForm = document.getElementById('signupForm');
+const switchToSignup = document.getElementById('switchToSignup');
+const switchToLogin = document.getElementById('switchToLogin');
+const loginSwitch = document.getElementById('loginSwitch');
+const signupSwitch = document.getElementById('signupSwitch');
+const emailError = document.getElementById('emailError');
+const signupEmail = document.getElementById('signupEmail');
+const loginButton = document.getElementById('loginButton');
+const signupButton = document.getElementById('signupButton');
+
+// Initialize login suggestions when page loads
+document.addEventListener('DOMContentLoaded', function() {
+  updateLoginSuggestions();
+  setupAutoLogout(); // NEW: Setup auto-logout
+  setupDailyReset(); // NEW: Setup daily reset
+});
+
+// Clear login history button
+document.getElementById('clearHistoryBtn').addEventListener('click', function(e) {
+  e.preventDefault();
+  if (confirm('Clear all login history?')) {
+    clearLoginHistory();
+    showToast('Login history cleared', 'success');
+  }
+});
+
+// Real-time form validation
+document.getElementById('username').addEventListener('input', function() {
+  const isValid = this.value.length >= 3;
+  showValidationFeedback(this, isValid, isValid ? 'Looks good!' : 'Username must be at least 3 characters');
+});
+
+document.getElementById('password').addEventListener('input', function() {
+  const isValid = this.value.length >= 6;
+  showValidationFeedback(this, isValid, isValid ? 'Looks good!' : 'Password must be at least 6 characters');
+});
+
+document.getElementById('signupEmail').addEventListener('input', function() {
+  const isValid = validateEmail(this.value);
+  showValidationFeedback(this, isValid, isValid ? 'Valid email' : 'Must be a valid @dawasa.go.tz email');
+  emailError.style.display = this.value && !isValid ? 'block' : 'none';
+});
+
+document.getElementById('signupUsername').addEventListener('input', function() {
+  const isValid = validateUsername(this.value);
+  showValidationFeedback(this, isValid, isValid ? 'Looks good!' : 'Username must be at least 3 characters');
+});
+
+document.getElementById('signupPassword').addEventListener('input', function() {
+  const isValid = validatePassword(this.value);
+  showValidationFeedback(this, isValid, isValid ? 'Looks good!' : 'Password must be at least 6 characters');
+});
+
+// Switch between login and signup forms
+switchToSignup.addEventListener('click', function() {
+  loginForm.style.display = 'none';
+  signupForm.style.display = 'flex';
+  loginSwitch.style.display = 'none';
+  signupSwitch.style.display = 'block';
+});
+
+switchToLogin.addEventListener('click', function() {
+  signupForm.style.display = 'none';
+  loginForm.style.display = 'flex';
+  signupSwitch.style.display = 'none';
+  loginSwitch.style.display = 'block';
+  emailError.style.display = 'none';
+});
+
+// Validate email on signup
+signupEmail.addEventListener('blur', function() {
+  if (this.value && !validateDawasaEmail(this.value)) {
+    emailError.style.display = 'block';
+  } else {
+    emailError.style.display = 'none';
+  }
+});
+
+// Handle signup form submission
+signupForm.addEventListener('submit', function(e) {
+  e.preventDefault();
+  
+  const email = document.getElementById('signupEmail').value;
+  const username = document.getElementById('signupUsername').value;
+  const password = document.getElementById('signupPassword').value;
+  
+  // Validate all fields
+  const isEmailValid = validateEmail(email);
+  const isUsernameValid = validateUsername(username);
+  const isPasswordValid = validatePassword(password);
+  
+  if (!isEmailValid || !isUsernameValid || !isPasswordValid) {
+    showToast('Please fix the validation errors', 'error');
+    return;
+  }
+  
+  // Show loading state
+  signupButton.disabled = true;
+  signupButton.textContent = 'Creating Account...';
+  
+  // Register user
+  setTimeout(() => {
+    const result = registerUser(email, username, password);
+    
+    if (result.success) {
+      showToast('Account created successfully! Please log in.', 'success');
+      switchToLogin.click();
+      document.getElementById('username').value = email;
+    } else {
+      showToast(result.message, 'error');
+    }
+    
+    // Reset button state
+    signupButton.disabled = false;
+    signupButton.textContent = 'Create Account';
+  }, 1000);
+});
+
+/* ---------------------- Login Functionality ---------------------- */
+const loginPage = document.getElementById('loginPage');
+const main = document.getElementById('main');
+const logoutBtn = document.getElementById('logoutBtn');
+const usernameDisplay = document.getElementById('usernameDisplay');
+const logo = document.getElementById('logo');
+
+// Check if user is already logged in
+if (localStorage.getItem('isLoggedIn') === 'true' && localStorage.getItem('currentUser')) {
+  const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+  loginPage.style.display = 'none';
+  main.style.display = 'flex';
+  usernameDisplay.textContent = `Logged in as: ${currentUser.username}`;
+  // Show logout button with animation
+  setTimeout(() => {
+    logoutBtn.classList.add('visible');
+  }, 300);
+  
+  // AUTO-CONNECT: Connect to MQTT immediately if already logged in
+  connectMqtt();
+}
+
+// Handle login form submission
+loginForm.addEventListener('submit', function(e) {
+  e.preventDefault();
+  const identifier = document.getElementById('username').value;
+  const password = document.getElementById('password').value;
+  
+  // Show loading state
+  loginButton.disabled = true;
+  loginButton.textContent = 'Logging in...';
+  
+  // Authenticate user
+  setTimeout(() => {
+    const result = authenticateUser(identifier, password);
+    
+    if (result.success) {
+      // Save this login to history
+      saveLoginHistory(identifier);
+      
+      localStorage.setItem('isLoggedIn', 'true');
+      localStorage.setItem('currentUser', JSON.stringify(result.user));
+      loginPage.style.display = 'none';
+      main.style.display = 'flex';
+      usernameDisplay.textContent = `Logged in as: ${result.user.username}`;
+      
+      // Show logout button with animation
+      setTimeout(() => {
+        logoutBtn.classList.add('visible');
+      }, 300);
+      
+      showToast('Login successful!', 'success');
+      
+      // AUTO-CONNECT: Connect to MQTT immediately after successful login
+      connectMqtt();
+    } else {
+      showToast(result.message || 'Login failed', 'error');
+    }
+    
+    // Reset button state
+    loginButton.disabled = false;
+    loginButton.textContent = 'Log In';
+  }, 1000);
+});
+
+// Handle logout
+logoutBtn.addEventListener('click', function() {
+  // Hide logout button with animation
+  logoutBtn.classList.remove('visible');
+  
+  // Wait for animation to complete before hiding everything
+  setTimeout(() => {
+    localStorage.removeItem('isLoggedIn');
+    localStorage.removeItem('currentUser');
+    loginPage.style.display = 'flex';
+    main.style.display = 'none';
+    document.getElementById('username').value = '';
+    document.getElementById('password').value = '';
+    usernameDisplay.textContent = '';
+    
+    showToast('You have been logged out', 'info');
+  }, 300);
+});
+
+/* ---------------------- UI: sidebar & views ---------------------- */
+const navigation = document.querySelector(".navigation");
+const toggle = document.querySelector(".toggle");
+const overlay = document.querySelector("#overlay");
+const themeToggle = document.querySelector("#themeToggle");
+const menuLinks = document.querySelectorAll(".navigation li a");
+const pageTitle = document.getElementById("pageTitle");
+
+// Theme toggle
+function toggleTheme() {
+  const currentTheme = document.documentElement.getAttribute("data-theme") === "dark" ? "light" : "dark";
+  document.documentElement.setAttribute("data-theme", currentTheme);
+  themeToggle.innerHTML = `<ion-icon name="${currentTheme === 'dark' ? 'sunny-outline' : 'moon-outline'}"></ion-icon>`;
+  localStorage.setItem("theme", currentTheme);
+  
+  showToast(`${currentTheme === 'dark' ? 'Dark' : 'Light'} mode enabled`, 'info', 2000);
+}
+
+// Load theme from localStorage
+const savedTheme = localStorage.getItem("theme") || "light";
+document.documentElement.setAttribute("data-theme", savedTheme);
+themeToggle.innerHTML = `<ion-icon name="${savedTheme === 'dark' ? 'sunny-outline' : 'moon-outline'}"></ion-icon>`;
+themeToggle.addEventListener("click", toggleTheme);
+
+// Check if device is mobile
+function isMobile() {
+  return window.innerWidth <= 991;
+}
+
+// Toggle sidebar
+function toggleSidebar() {
+  navigation.classList.toggle("active");
+  main.classList.toggle("active");
+  overlay.classList.toggle("active");
+}
+
+// Close sidebar
+function closeSidebar() {
+  navigation.classList.remove("active");
+  main.classList.remove("active");
+  overlay.classList.remove("active");
+}
+
+toggle.onclick = toggleSidebar;
+overlay.onclick = closeSidebar;
+
+function showView(viewId) {
+  document.querySelectorAll(".views").forEach(v => v.classList.remove("active"));
+  document.querySelectorAll(".navigation li").forEach(li => li.classList.remove("active"));
+  
+  if (viewId === "dashboard") {
+    document.getElementById("dashboardView").classList.add("active");
+    pageTitle.textContent = "DAWASA Flowmeters";
+    document.querySelector('.navigation li a[data-view="dashboard"]').parentElement.classList.add("active");
+  } else {
+    document.getElementById(viewId + "View").classList.add("active");
+    const flowmeterNumber = viewId.replace('fm', '');
+    const formattedNumber = flowmeterNumber.length === 1 ? '0' + flowmeterNumber : flowmeterNumber;
+    const flowmeterType = viewId === 'fm1' || viewId === 'fm2' ? 'SA' : 
+                          viewId === 'fm3' || viewId === 'fm4' ? 'SB' : 'WTP';
+    pageTitle.textContent = `Flowmeter ${formattedNumber}-${flowmeterType}`;
+    document.querySelector(`.navigation li a[data-view="${viewId}"]`).parentElement.classList.add("active");
+  }
+  
+  if (isMobile()) {
+    closeSidebar();
+  }
+}
+
+menuLinks.forEach(a => {
+  a.addEventListener("click", e => {
+    e.preventDefault();
+    const view = a.getAttribute("data-view") || "dashboard";
+    showView(view);
+  });
+});
+
+/* ---------------------- Chart helpers ---------------------- */
+const MAX_POINTS_DASHBOARD = 10;
+const MAX_POINTS_SINGLE = 20;
+const charts = {};
+const flowmeterData = {
+  fm1: { labels: [], values: [], total: 0, average: 0, peak: 0, today: new Date().toISOString().slice(0, 10) },
+  fm2: { labels: [], values: [], total: 0, average: 0, peak: 0, today: new Date().toISOString().slice(0, 10) },
+  fm3: { labels: [], values: [], total: 0, average: 0, peak: 0, today: new Date().toISOString().slice(0, 10) },
+  fm4: { labels: [], values: [], total: 0, average: 0, peak: 0, today: new Date().toISOString().slice(0, 10) },
+  fm5: { labels: [], values: [], total: 0, average: 0, peak: 0, today: new Date().toISOString().slice(0, 10) }
+};
+
+const chartColors = {
+  fm1: { border: '#007BFF', background: 'rgba(0, 123, 255, 0.3)' },
+  fm2: { border: '#28A745', background: 'rgba(40, 167, 69, 0.3)' },
+  fm3: { border: '#DC3545', background: 'rgba(220, 53, 69, 0.3)' },
+  fm4: { border: '#FFC107', background: 'rgba(255, 193, 7, 0.3)' },
+  fm5: { border: '#6F42C1', background: 'rgba(111, 66, 193, 0.3)' }
+};
+
+function createLineChart(canvasId, fmKey) {
+  const ctx = document.getElementById(canvasId);
+  if (!ctx) return null;
+  
+  // Get computed style for CSS variables
+  const computedStyle = getComputedStyle(document.documentElement);
+  const textColor = computedStyle.getPropertyValue('--text').trim();
+  const textMutedColor = computedStyle.getPropertyValue('--text-muted').trim();
+  const borderColor = computedStyle.getPropertyValue('--border').trim();
+  
+  // Adjust line weight in dark mode
+  const isDarkMode = document.documentElement.getAttribute("data-theme") === "dark";
+  const lineWidth = isDarkMode ? 2 : 3;
+  
+  return new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: [],
+      datasets: [{
+        label: 'Flowrate',
+        data: [],
+        fill: true,
+        borderColor: chartColors[fmKey].border,
+        backgroundColor: chartColors[fmKey].background,
+        tension: 0.35,
+        pointRadius: 3,
+        pointBackgroundColor: chartColors[fmKey].border,
+        pointBorderColor: '#fff',
+        pointBorderWidth: 2,
+        pointHoverRadius: 5,
+        borderWidth: lineWidth
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { 
+        legend: { 
+          display: true,
+          labels: {
+            color: textColor // Use --text (smoke white in dark mode, dark in light mode)
+          }
+        } 
+      },
+      scales: {
+        x: { 
+          title: { 
+            display: true, 
+            text: 'Time',
+            color: textColor // Use --text for x-axis title
+          },
+          ticks: {
+            color: textColor // Use --text for x-axis tick labels
+          },
+          grid: {
+            color: borderColor
+          }
+        },
+        y: { 
+          title: { 
+            display: true, 
+            text: 'Flowrate (m³/h)',
+            color: textColor // Use --text for y-axis title
+          }, 
+          beginAtZero: true,
+          ticks: {
+            color: textColor // Use --text for y-axis tick labels
+          },
+          grid: {
+            color: borderColor
+          }
+        }
+      },
+      interaction: {
+        intersect: false,
+        mode: 'index'
+      }
+    }
+  });
+}
+
+function pushPoint(chart, label, value, maxPoints) {
+  if (!chart) return;
+  chart.data.labels.push(label);
+  chart.data.datasets[0].data.push(Number(value));
+  if (chart.data.labels.length > maxPoints) {
+    chart.data.labels.shift();
+    chart.data.datasets[0].data.shift();
+  }
+  chart.update('none');
+}
+
+function prependRow(tbodyId, dateStr, timeStr, flow, maxRows) {
+  const tb = document.getElementById(tbodyId);
+  if (!tb) return;
+  const tr = document.createElement('tr');
+  tr.innerHTML = `<td>${dateStr}</td><td>${timeStr}</td><td>${Number(flow).toFixed(2)}</td>`;
+  tb.prepend(tr);
+  while (tb.rows.length > maxRows) { tb.deleteRow(tb.rows.length - 1); }
+}
+
+function updateMetricsDisplay(fmKey, latest, total, average, peak) {
+  // Update gauges (dashboard view) - Latest and Peak
+  setGauge(`${fmKey}LatestArc`, `${fmKey}LatestGauge`, `${fmKey}LatestStatus`, latest);
+  setGauge(`${fmKey}PeakArc`, `${fmKey}PeakGauge`, `${fmKey}PeakStatus`, peak);
+  
+  // Update text displays (individual view) - Latest and Peak
+  const latestSingle = document.getElementById(`${fmKey}LatestGauge_single`);
+  const peakSingle = document.getElementById(`${fmKey}PeakGauge_single`);
+  
+  if (latestSingle) {
+    latestSingle.textContent = Number.isFinite(latest) ? latest.toFixed(2) + " m³/h" : "-- m³/h";
+  }
+  
+  if (peakSingle) {
+    peakSingle.textContent = Number.isFinite(peak) ? peak.toFixed(2) + " m³/h" : "-- m³/h";
+  }
+  
+  // Update status for individual view
+  setGauge(null, null, `${fmKey}LatestStatus_single`, latest);
+  setGauge(null, null, `${fmKey}PeakStatus_single`, peak);
+  
+  // Update text displays for both views - Total and Average
+  const dashboardTotal = document.getElementById(`${fmKey}Total`);
+  const dashboardAverage = document.getElementById(`${fmKey}Average`);
+  if (dashboardTotal) dashboardTotal.textContent = Number(total).toFixed(2);
+  if (dashboardAverage) dashboardAverage.textContent = Number(average).toFixed(2);
+  
+  const singleTotal = document.getElementById(`${fmKey}Total_single`);
+  const singleAverage = document.getElementById(`${fmKey}Average_single`);
+  if (singleTotal) singleTotal.textContent = Number(total).toFixed(2);
+  if (singleAverage) singleAverage.textContent = Number(average).toFixed(2);
+}
+
+function syncSingleTable(fmKey) {
+  const single = document.getElementById(`${fmKey}Table_single`);
+  if (!single) return;
+  single.innerHTML = '';
+  const data = flowmeterData[fmKey];
+  const maxRows = Math.min(data.labels.length, MAX_POINTS_SINGLE);
+  for (let i = Math.max(0, data.labels.length - maxRows); i < data.labels.length; i++) {
+    prependRow(`${fmKey}Table_single`, data.today, data.labels[i], data.values[i], MAX_POINTS_SINGLE);
+  }
+}
+
+function syncSingleChart(fmKey) {
+  const src = charts[`${fmKey}Chart`];
+  const dst = charts[`${fmKey}Chart_single`];
+  if (!src || !dst) return;
+  dst.data.labels = [...src.data.labels];
+  dst.data.datasets[0].data = [...src.data.datasets[0].data];
+  if (dst.data.labels.length > MAX_POINTS_SINGLE) {
+    dst.data.labels = dst.data.labels.slice(-MAX_POINTS_SINGLE);
+    dst.data.datasets[0].data = dst.data.datasets[0].data.slice(-MAX_POINTS_SINGLE);
+  }
+  dst.update('none');
+}
+
+/* ---------------------- Data persistence ---------------------- */
+function saveFlowmeterData(fmKey) {
+  localStorage.setItem(`flowmeter_${fmKey}`, JSON.stringify(flowmeterData[fmKey]));
+}
+
+function loadFlowmeterData(fmKey) {
+  const savedData = localStorage.getItem(`flowmeter_${fmKey}`);
+  if (savedData) {
+    const data = JSON.parse(savedData);
+    if (data.today === new Date().toISOString().slice(0, 10)) {
+      flowmeterData[fmKey] = { ...data };
+      const maxDash = Math.min(data.labels.length, MAX_POINTS_DASHBOARD);
+      const maxSingle = Math.min(data.labels.length, MAX_POINTS_SINGLE);
+      for (let i = Math.max(0, data.labels.length - maxDash); i < data.labels.length; i++) {
+        pushPoint(charts[`${fmKey}Chart`], data.labels[i], data.values[i], MAX_POINTS_DASHBOARD);
+      }
+      for (let i = Math.max(0, data.labels.length - maxSingle); i < data.labels.length; i++) {
+        prependRow(`${fmKey}Table_single`, data.today, data.labels[i], data.values[i], MAX_POINTS_SINGLE);
+      }
+      updateMetricsDisplay(fmKey, data.values[data.values.length - 1] || 0, data.total, data.average, data.peak);
+      syncSingleChart(fmKey);
+    } else {
+      localStorage.removeItem(`flowmeter_${fmKey}`);
+      flowmeterData[fmKey] = { labels: [], values: [], total: 0, average: 0, peak: 0, today: new Date().toISOString().slice(0, 10) };
+    }
+  }
+}
+
+/* ---------------------- Init charts ---------------------- */
+['fm1', 'fm2', 'fm3', 'fm4', 'fm5'].forEach(fm => {
+  charts[`${fm}Chart`] = createLineChart(`${fm}Chart`, fm);
+  charts[`${fm}Chart_single`] = createLineChart(`${fm}Chart_single`, fm);
+  loadFlowmeterData(fm);
+});
+
+/* ---------------------- Flowmeter update ---------------------- */
+function updateFlowmeter(fmKey, value, dateStr, timeStr) {
+  const data = flowmeterData[fmKey];
+  const currentDate = new Date().toISOString().slice(0, 10);
+  
+  if (data.today !== currentDate) {
+    data.labels = [];
+    data.values = [];
+    data.total = 0;
+    data.average = 0;
+    data.peak = 0;
+    data.today = currentDate;
+  }
+  
+  data.labels.push(timeStr);
+  data.values.push(Number(value));
+  data.total += Number(value);
+  data.peak = Math.max(data.peak, Number(value));
+  // Calculate average as total divided by number of readings
+  data.average = data.values.length > 0 ? data.total / data.values.length : 0;
+  
+  if (data.labels.length > MAX_POINTS_SINGLE) {
+    data.labels.shift();
+    data.values.shift();
+  }
+  
+  updateMetricsDisplay(fmKey, value, data.total, data.average, data.peak);
+  pushPoint(charts[`${fmKey}Chart`], timeStr, value, MAX_POINTS_DASHBOARD);
+  prependRow(`${fmKey}Table_single`, dateStr, timeStr, value, MAX_POINTS_SINGLE);
+  syncSingleChart(fmKey);
+  
+  saveFlowmeterData(fmKey);
+}
+
+/* ---------------------- MQTT Integration ---------------------- */
+const broker = "ws://broker.emqx.io:8083/mqtt";
+let client = null;
+let reconnectAttempts = 0;
+const maxReconnectAttempts = 10;
+
+function connectMqtt() {
+  updateConnectionStatus('connecting');
+  
+  client = mqtt.connect(broker, { 
+    reconnectPeriod: 2000,
+    clientId: 'dawasa-dashboard-' + Math.random().toString(16).substr(2, 8)
+  });
+
+  client.on("connect", () => {
+    console.log("MQTT connected");
+    reconnectAttempts = 0;
+    updateConnectionStatus('connected');
+    
+    // Subscribe to the new topics as requested
+    client.subscribe("transmiter01txa");  // For flowmeters 1 and 2
+    client.subscribe("transmiter01txb");  // For flowmeters 3 and 4
+    client.subscribe("transmiter02tx");   // For flowmeter 5 (unchanged)
+  });
+
+  client.on("reconnect", () => {
+    console.log("MQTT reconnecting...");
+    reconnectAttempts++;
+    if (reconnectAttempts >= maxReconnectAttempts) {
+      client.end();
+      showToast('Max reconnection attempts reached. Please refresh the page.', 'error');
+    }
+  });
+  
+  client.on("close", () => {
+    console.log("MQTT connection closed");
+    updateConnectionStatus('disconnected');
+  });
+  
+  client.on("offline", () => {
+    console.log("MQTT offline");
+    updateConnectionStatus('disconnected');
+  });
+
+  client.on("error", (err) => {
+    console.error("MQTT error:", err?.message || err);
+    updateConnectionStatus('disconnected');
+  });
+
+  client.on("message", (topic, message) => {
+    const ts = new Date();
+    const dateStr = ts.toISOString().slice(0, 10);
+    const timeStr = ts.toTimeString().split(' ')[0];
+
+    try {
+      const txt = message.toString().trim();
+      let data;
+      try { data = JSON.parse(txt); } catch (e) { data = txt; }
+
+      // CORRECTED: Match the actual subscribed topics
+      if (topic === "transmiter01txa") {
+        // Handle data for flowmeters 1 and 2
+        if (Array.isArray(data) && data.length >= 2) {
+          // Update flowmeter 1 with first value
+          const val1 = Number(Object.values(data[0])[0]);
+          if (!isNaN(val1)) updateFlowmeter('fm1', val1, dateStr, timeStr);
+          
+          // Update flowmeter 2 with second value
+          const val2 = Number(Object.values(data[1])[0]);
+          if (!isNaN(val2)) updateFlowmeter('fm2', val2, dateStr, timeStr);
+        }
+      } else if (topic === "transmiter01txb") {
+        // Handle data for flowmeters 3 and 4
+        if (Array.isArray(data) && data.length >= 2) {
+          // Update flowmeter 3 with first value
+          const val3 = Number(Object.values(data[0])[0]);
+          if (!isNaN(val3)) updateFlowmeter('fm3', val3, dateStr, timeStr);
+          
+          // Update flowmeter 4 with second value
+          const val4 = Number(Object.values(data[1])[0]);
+          if (!isNaN(val4)) updateFlowmeter('fm4', val4, dateStr, timeStr);
+        }
+      } else if (topic === "transmiter02tx") {
+        // Handle data for flowmeter 5 (unchanged)
+        let val;
+        if (typeof data === 'object' && data !== null) { 
+          val = Number(Object.values(data)[0]); 
+        } else { 
+          val = Number(data); 
+        }
+        if (!isNaN(val)) updateFlowmeter('fm5', val, dateStr, timeStr);
+      }
+    } catch (err) { 
+      console.error("MQTT message error:", err); 
+    }
+  });
+}
+
+// Initialize MQTT connection when user logs in
+if (localStorage.getItem('isLoggedIn') === 'true') {
+  connectMqtt();
+}
+
+// Reconnect when coming back from sleep or lost connection
+document.addEventListener('visibilitychange', function() {
+  if (document.visibilityState === 'visible' && localStorage.getItem('isLoggedIn') === 'true') {
+    if (!client || client.connected === false) {
+      connectMqtt();
+    }
+  }
+});
+
+// Handle window resize
+window.addEventListener('resize', function() {
+  Object.values(charts).forEach(chart => {
+    if (chart) chart.resize();
+  });
+});
+
+// Update chart line weight and label colors when theme changes
+themeToggle.addEventListener('click', function() {
+  setTimeout(() => {
+    const isDarkMode = document.documentElement.getAttribute("data-theme") === "dark";
+    const lineWidth = isDarkMode ? 2 : 3;
+    const computedStyle = getComputedStyle(document.documentElement);
+    const textColor = computedStyle.getPropertyValue('--text').trim();
+    
+    Object.values(charts).forEach(chart => {
+      if (chart) {
+        chart.data.datasets[0].borderWidth = lineWidth;
+        chart.options.plugins.legend.labels.color = textColor;
+        chart.options.scales.x.title.color = textColor;
+        chart.options.scales.x.ticks.color = textColor;
+        chart.options.scales.y.title.color = textColor;
+        chart.options.scales.y.ticks.color = textColor;
+        chart.update('none');
+      }
+    });
+  }, 100);
+});
+
+// Add these to your existing JavaScript code
+
+// Enhanced login form animations
+function animateLoginForm() {
+  const formElements = document.querySelectorAll('.login-form .form-group');
+  formElements.forEach((element, index) => {
+    element.style.opacity = '0';
+    element.style.transform = 'translateY(20px)';
+    element.style.transition = `all 0.5s ease ${index * 0.2}s`;
+    
+    setTimeout(() => {
+      element.style.opacity = '1';
+      element.style.transform = 'translateY(0)';
+    }, 100);
+  });
+}
+
+// Initialize animations when login page is shown
+if (document.getElementById('loginPage').style.display !== 'none') {
+  setTimeout(animateLoginForm, 1000);
+}
+
+// Add hover effects to form inputs
+document.querySelectorAll('.form-group input').forEach(input => {
+  input.addEventListener('focus', () => {
+    input.parentElement.style.transform = 'scale(1.02)';
+    input.parentElement.style.transition = 'transform 0.3s ease';
+  });
+  
+  input.addEventListener('blur', () => {
+    input.parentElement.style.transform = 'scale(1)';
+  });
+});
+
+// Enhanced button hover effects
+document.querySelectorAll('.login-btn').forEach(button => {
+  button.addEventListener('mouseenter', () => {
+    button.style.transform = 'translateY(-2px) scale(1.05)';
+  });
+  
+  button.addEventListener('mouseleave', () => {
+    button.style.transform = 'translateY(0) scale(1)';
+  });
+});
+
+</script>
+
+</body>
+</html>
